@@ -8,11 +8,14 @@ exports.register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
+        // 1. Check if user already exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) return res.status(400).json({ message: "Email pehle se majood hai." });
 
+        // 2. Hash Password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // 3. Create User (Default: NOT Approved)
         const newUser = await prisma.user.create({
             data: {
                 name,
@@ -86,7 +89,43 @@ exports.approveUser = async (req, res) => {
             where: { id: userId },
             data: { isApproved: true }
         });
-        res.json({ message: "User account approve kar diya gaya hai.", user: updatedUser.email });
+        res.json({
+            message: "User account approve kar diya gaya hai.",
+            user: updatedUser.email
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// 5. GET ALL PENDING USERS: Admin dekh sake kitne log approval maang rahe hain
+exports.getPendingUsers = async (req, res) => {
+    try {
+        const pendingUsers = await prisma.user.findMany({
+            where: {
+                isApproved: false,
+                role: 'STUDENT'
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                createdAt: true
+            }
+        });
+        res.json(pendingUsers);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.rejectUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        await prisma.user.delete({
+            where: { id: userId }
+        });
+        res.json({ message: "User request rejected and account deleted." });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

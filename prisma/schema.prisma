@@ -1,18 +1,17 @@
 // prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-node"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // Ya "mysql" agar aap wo use kar rahe hain
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 enum Role {
   STUDENT
   ADMIN
-  UNIVERSITY
 }
 
 enum RequestStatus {
@@ -24,39 +23,35 @@ enum RequestStatus {
 }
 
 model User {
-  id              String   @id @default(uuid())
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
   email           String   @unique
   password        String
   name            String
   role            Role     @default(STUDENT)
-  isApproved      Boolean  @default(false) // Admin approval check
-  isEmailVerified Boolean  @default(false)
+  isApproved      Boolean  @default(false)
   createdAt       DateTime @default(now())
   requests        VerificationRequest[]
 }
 
 model VerificationRequest {
-  id                String        @id @default(uuid())
-  studentId         String
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String        @db.ObjectId
   student           User          @relation(fields: [studentId], references: [id])
-  serviceType       String        // Academic, Employment, etc.
+  serviceType       String
   status            RequestStatus @default(SUBMITTED)
   
-  // Qualification Details
   fullName          String
   universityName    String
   degreeTitle       String
   graduationYear    Int
   registrationNo    String
   
-  // Files (URLs from S3/Cloudinary)
   degreeDoc         String
   transcriptDoc     String
   passportDoc       String
   
-  // Admin's Verified Report
-  verifiedReportUrl String?       // Admin upload karega verification ke baad
-  accessCode        String?       @unique // University ko check karne ke liye code
+  verifiedReportUrl String?
+  accessCode        String?       @unique
   
   isPaid            Boolean       @default(false)
   createdAt         DateTime      @default(now())
